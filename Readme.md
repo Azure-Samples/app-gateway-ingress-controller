@@ -1,11 +1,11 @@
-| Language | Framework | Platform | Author |
-| -------- | -------- |--------|--------|
-| ASP.NET Core | .NET Core 3.1 | Azure Web App, Virtual Machines |
 
+# App Gateway Ingress Controller
 
-# ASP.NET Core MVC application
+It is important to know that AKS does not offer ingress controller out of the box. While there are other 
 
-Sample ASP.NET Core MVC application built using Visual Studio 2019.
+[App Gateway Ingress Controller](https://azure.github.io/application-gateway-kubernetes-ingress/)
+
+[AGIC](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview)
 
 ## License:
 

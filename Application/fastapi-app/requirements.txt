@@ -1,0 +1,9 @@
+uvicorn
+fastapi
+pyjwt
+passlib
+bcrypt
+pylint
+pytest
+pytest-cov
+black

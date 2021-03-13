@@ -1,0 +1,8 @@
+version: "3.9"
+
+services: 
+  agic-sampleapp:
+    build:
+      context: ./
+    ports:
+      - 8080:8080
