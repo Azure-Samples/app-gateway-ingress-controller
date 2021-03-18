@@ -41,6 +41,9 @@
                 "description": "Containers DNS server IP address."
             }
         },
+        "clusterName": {
+            "type": "string"
+        },
         "aksDnsPrefix": {
             "defaultValue": "aks",
             "type": "string",
@@ -128,14 +131,13 @@
         "applicationGatewayPublicIpName": "[concat('appgwpublicip' , variables('resgpguid'))]",
         "kubernetesSubnetName": "kubesubnet",
         "applicationGatewaySubnetName": "appgwsubnet",
-        "aksClusterName": "[concat('aks' , variables('resgpguid'))]",
         "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
         "kubernetesSubnetId": "[concat(variables('vnetID'),'/subnets/', variables('kubernetesSubnetName'))]",
         "applicationGatewaySubnetId": "[concat(variables('vnetID'),'/subnets/', variables('applicationGatewaySubnetName'))]",
         "applicationGatewayPublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('applicationGatewayPublicIpName'))]",
         "applicationGatewayId": "[resourceId('Microsoft.Network/applicationGateways', variables('applicationGatewayName'))]",
         "identityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
-        "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksClusterName'))]",
+        "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]",
         "networkContributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
         "contributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
         "managedIdentityOperatorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'f1a07417-d97a-45cb-824c-7a7467783830')]",
@@ -380,7 +382,7 @@
         },
         {
             "type": "Microsoft.ContainerService/managedClusters",
-            "name": "[variables('aksClusterName')]",
+            "name": "[parameters('clusterName')]",
             "apiVersion": "2018-03-31",
             "location": "[resourceGroup().location]",
             "properties": {
@@ -441,9 +443,9 @@
             "type": "string",
             "value": "[reference(variables('aksClusterId'), '2018-03-31').fqdn]"
         },
-        "aksClusterName": {
+        "clusterName": {
             "type": "string",
-            "value": "[variables('aksClusterName')]"
+            "value": "[parameters('clusterName')]"
         }
     }
 }

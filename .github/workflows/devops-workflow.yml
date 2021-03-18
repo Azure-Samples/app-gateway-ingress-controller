@@ -12,19 +12,21 @@ env:
   IMAGENAME: "agicsampleappcc74"
   REGISTRYSKU: "Standard"
   REGISTRYNAME: "agicsampleappacr"
-  REGISTRYLOCATION: "South Central US"
+  REGISTRYLOCATION: "southcentralus"
   CLUSTERNAME: "agic-sampleapp"
-  # APPINSIGHTSLOCATION: "East US"
-  # CLUSTERLOCATION: "East US"
+  KUBERNETESAPI: "apps/v1"
   AGENTCOUNT: "3"
   AGENTVMSIZE: "Standard_DS2_v2"
   KUBERNETESVERSION: 1.19.6
-  # OMSLOCATION: "East US"
+  NAMESPACE: "agicsampleapp11bd"
+  DEPLOYMENTNAME: "agicsampledeploy" 
+  # APPINSIGHTSLOCATION: "eastus"
+  # CLUSTERLOCATION: "eastus"
+  # OMSLOCATION: "eastus"
   # OMSWORKSPACENAME: "agicsampleappc426"
   # HTTPSAPPLICATIONROUTINGENABLED: false
-  KUBERNETESAPI: "apps/v1"
-  # NAMESPACE: "agicsampleapp11bd"
-  DEPLOYMENTNAME: "agicsampledeploy"
+
+
 
 jobs:
   build:
@@ -55,9 +57,19 @@ jobs:
           az group create --resource-group ${{ env.RESOURCEGROUPNAME }} --location ${{ env.LOCATION }} 
 
     - name: Create AKS Cluster and AGIC
-      id: createACRandAGIC
-      run: |
-          az deployment group create -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.DEPLOYMENTNAME }} --template-file ./ArmTemplates/aks-agic-infra.json --parameters aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}"
+      uses: azure/arm-deploy@v1
+      id: deploy
+      with:
+        scope: resourcegroup
+        subscriptionId: ${{ env.SUBSCRIPTIONID }}
+        resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
+        template: ./ArmTemplates/aks-agic-infra.json
+        parameters: clusterName="${{ env.CLUSTERNAME }}" aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}"
+
+    # - name: Create AKS Cluster and AGIC
+    #   id: createACRandAGIC
+    #   run: |
+    #       az deployment group create -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.DEPLOYMENTNAME }} --template-file ./ArmTemplates/aks-agic-infra.json --parameters aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}"
 
     - name: Create ACR
       id: createACR
