@@ -52,12 +52,12 @@ jobs:
     - name: Create Resource Group
       id: createResourceGroup
       run: |
-          az group create --name $RESOURCEGROUPNAME --location $LOCATION
+          az group create --name  ${{ env.RESOURCEGROUPNAME }} --location  ${{ env.LOCATION }}
 
     - name: Create AKS Cluster and AGIC
       id: createACRandAGIC
       run: |
-          az deployment group create -g $RESOURCEGROUPNAME -n $DEPLOYMENTNAME --template-file ./ArmTemplates/aks-agic-infra.json --parameters aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}"
+          az deployment group create -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.DEPLOYMENTNAME }} --template-file ./ArmTemplates/aks-agic-infra.json --parameters aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}"
 
     - name: Create ACR
       id: createACR
