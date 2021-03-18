@@ -33,10 +33,10 @@ jobs:
     - uses: actions/checkout@v2
 
     # login to azure
-    - name: Login to Azure
-      uses: azure/login@v1
-      with:
-        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    # - name: Login to Azure
+    #   uses: azure/login@v1
+    #   with:
+    #     creds: ${{ secrets.AZURE_CREDENTIALS }}
 
     # - name: Create AKS Cluster
     #   uses: azure/arm-deploy@v1
