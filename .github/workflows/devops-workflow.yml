@@ -6,7 +6,7 @@ on:
 
 env:
   RESOURCEGROUPNAME: "agic-sampleapp-rg"
-  LOCATION: "East US"
+  LOCATION: "eastus"
   SUBSCRIPTIONID: ${{ secrets.SUBSCRIPTIONID }}
   TENANTID: ${{ secrets.TENANTID }}
   IMAGENAME: "agicsampleappcc74"
@@ -51,8 +51,8 @@ jobs:
 
     - name: Create Resource Group
       id: createResourceGroup
-      run: |
-          az group create --name  ${{ env.RESOURCEGROUPNAME }} --location  ${{ env.LOCATION }}
+      run: | 
+          az group create --resource-group ${{ env.RESOURCEGROUPNAME }} --location ${{ env.LOCATION }} 
 
     - name: Create AKS Cluster and AGIC
       id: createACRandAGIC
