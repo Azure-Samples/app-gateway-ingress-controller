@@ -52,8 +52,8 @@ jobs:
       uses: azure/arm-deploy@v1
       id: deploy
       with:
-        scope: resourcegroup
-        subscriptionId: ${{ env.SUBSCRIPTIONID }}
+        # scope: resourcegroup
+        # subscriptionId: ${{ env.SUBSCRIPTIONID }}
         resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
         template: ./ArmTemplates/aks-agic-infra.json
         parameters: aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}"
