@@ -66,8 +66,15 @@
                 "description": "The number of agent nodes for the cluster."
             }
         },
+        "aksAgentVMSize": {
+            "defaultValue": "Standard_D3_v2",
+            "type": "string",
+            "metadata": {
+                "description": "The size of the Virtual Machine."
+            }
+        },
         "kubernetesVersion": {
-            "defaultValue": "1.19.6",
+            "defaultValue": "1.18.10",
             "type": "string",
             "metadata": {
                 "description": "The version of Kubernetes."
@@ -111,36 +118,9 @@
             "metadata": {
                 "description": "The sku of the Application Gateway. Default: WAF_v2 (Detection mode). In order to further customize WAF, use azure portal or cli."
             }
-        },
-        "clusterName": {
-            "type": "string"
-        },
-        "appInsightsLocation": {
-            "type": "string"
-        },
-        "clusterLocation": {
-            "type": "string"
-        },        
-        "aksAgentVMSize": {
-            "defaultValue": "Standard_D2_v2",
-            "type": "string"
-        },
-        "omsLocation": {
-            "type": "string"
-        },
-        "clusterTags": {
-            "type": "object",
-            "defaultValue": {}
-        },
-        "omsWorkspaceName": {
-            "type": "string"
-        },
-        "httpApplicationRoutingEnabled": {
-            "type": "bool"
         }
     },
     "variables": {
-        "omsWorkspaceId": "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsWorkspaceName'))]",
         "resgpguid": "[substring(replace(guid(resourceGroup().id), '-', ''), 0, 4)]",
         "vnetName": "[concat('virtualnetwork' , variables('resgpguid'))]",
         "applicationGatewayName": "[concat('applicationgateway' , variables('resgpguid'))]",
@@ -148,13 +128,14 @@
         "applicationGatewayPublicIpName": "[concat('appgwpublicip' , variables('resgpguid'))]",
         "kubernetesSubnetName": "kubesubnet",
         "applicationGatewaySubnetName": "appgwsubnet",
+        "aksClusterName": "[concat('aks' , variables('resgpguid'))]",
         "vnetId": "[resourceId('Microsoft.Network/virtualNetworks', variables('vnetName'))]",
         "kubernetesSubnetId": "[concat(variables('vnetID'),'/subnets/', variables('kubernetesSubnetName'))]",
         "applicationGatewaySubnetId": "[concat(variables('vnetID'),'/subnets/', variables('applicationGatewaySubnetName'))]",
         "applicationGatewayPublicIpId": "[resourceId('Microsoft.Network/publicIPAddresses',variables('applicationGatewayPublicIpName'))]",
         "applicationGatewayId": "[resourceId('Microsoft.Network/applicationGateways', variables('applicationGatewayName'))]",
         "identityId": "[resourceId('Microsoft.ManagedIdentity/userAssignedIdentities', variables('identityName'))]",
-        "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', parameters('clusterName'))]",
+        "aksClusterId": "[resourceId('Microsoft.ContainerService/managedClusters', variables('aksClusterName'))]",
         "networkContributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', '4d97b98b-1d4f-4787-a291-c67834d212e7')]",
         "contributorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'b24988ac-6180-42a0-ab88-20f7382dd24c')]",
         "managedIdentityOperatorRole": "[concat('/subscriptions/', subscription().subscriptionId, '/providers/Microsoft.Authorization/roleDefinitions/', 'f1a07417-d97a-45cb-824c-7a7467783830')]",
@@ -398,39 +379,14 @@
             ]
         },
         {
-            "type": "Microsoft.Insights/components",
-            "name": "[parameters('clusterName')]",
-            "apiVersion": "2014-04-01",
-            "location": "[parameters('appInsightsLocation')]",
-            "tags": {
-                "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.ContainerService/managedClusters/', parameters('clusterName'))]": "Resource"
-            },
-            "properties": {
-                "applicationId": "[parameters('clusterName')]",
-                "Request_Source": "AzureTfsExtensionAzureProject"
-            }
-        },
-        {
             "type": "Microsoft.ContainerService/managedClusters",
-            "name": "[parameters('clusterName')]",
+            "name": "[variables('aksClusterName')]",
             "apiVersion": "2018-03-31",
-            "location": "[parameters('clusterLocation')]",
-            "tags": "[parameters('clusterTags')]",
+            "location": "[resourceGroup().location]",
             "properties": {
                 "kubernetesVersion": "[parameters('kubernetesVersion')]",
                 "enableRBAC": "[parameters('aksEnableRBAC')]",
                 "dnsPrefix": "[parameters('aksDnsPrefix')]",
-                "addonProfiles": {
-                    "httpApplicationRouting": {
-                        "enabled": "[parameters('httpApplicationRoutingEnabled')]"
-                    },
-                    "omsagent": {
-                        "enabled": true,
-                        "config": {
-                            "logAnalyticsWorkspaceResourceID": "[resourceId('Microsoft.OperationalInsights/workspaces', parameters('omsWorkspaceName'))]"
-                        }
-                    }
-                },
                 "agentPoolProfiles": [
                     {
                         "name": "agentpool",
@@ -456,38 +412,8 @@
             },
             "dependsOn": [
                 "[concat('Microsoft.Network/virtualNetworks/', variables('vnetName'))]",
-                "[concat('Microsoft.Resources/deployments/', 'RoleAssignmentDeploymentForKubenetesSp')]",
-                "[variables('omsWorkspaceId')]"
+                "[concat('Microsoft.Resources/deployments/', 'RoleAssignmentDeploymentForKubenetesSp')]"
             ]
-        },
-        {
-            "apiVersion": "2017-03-15-preview",
-            "type": "Microsoft.OperationalInsights/workspaces",
-            "name": "[parameters('omsWorkspaceName')]",
-            "location": "[parameters('omsLocation')]",
-            "properties": {
-                "sku": {
-                    "name": "standalone"
-                }
-            }
-        },
-        {
-            "apiVersion": "2015-11-01-preview",
-            "type": "Microsoft.OperationsManagement/solutions",
-            "location": "[parameters('omsLocation')]",
-            "dependsOn": [
-                "[variables('omsWorkspaceId')]"
-            ],
-            "name": "[concat('ContainerInsights', '(', parameters('omsWorkspaceName'), ')')]",
-            "properties": {
-                "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('omsWorkspaceName'))]"
-            },
-            "plan": {
-                "name": "[concat('ContainerInsights', '(', parameters('omsWorkspaceName'), ')')]",
-                "product": "OMSGallery/ContainerInsights",
-                "promotionCode": "",
-                "publisher": "Microsoft"
-            }
         }
     ],
     "outputs": {
@@ -515,13 +441,9 @@
             "type": "string",
             "value": "[reference(variables('aksClusterId'), '2018-03-31').fqdn]"
         },
-        "applicationRoutingZone": {
-            "value": "[if(parameters('httpApplicationRoutingEnabled'), reference(variables('clusterId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName, '')]",
-            "type": "string"
-        },
-        "aiKey": {
-            "value": "[reference(concat('Microsoft.Insights/components/', parameters('clusterName'))).InstrumentationKey]",
-            "type": "string"
+        "aksClusterName": {
+            "type": "string",
+            "value": "[variables('aksClusterName')]"
         }
     }
 }
