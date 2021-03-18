@@ -41,7 +41,6 @@ jobs:
       uses: azure/arm-deploy@v1
       id: deploy
       with:
-        creds: ${{ secrets.AKSSERVICEPRINCIPALAPPID }} ${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }} ${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}
         scope: resourcegroup
         subscriptionId: ${{ env.SUBSCRIPTIONID }}
         resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
