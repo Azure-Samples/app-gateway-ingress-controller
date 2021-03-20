@@ -17,7 +17,8 @@ env:
   KUBERNETESAPI: "apps/v1"
   AGENTCOUNT: "3"
   AGENTVMSIZE: "Standard_DS2_v2"
-  KUBERNETESVERSION: 1.19.6
+  KUBERNETESVERSION: 1.17.13
+  #1.19.6
   NAMESPACE: "agicsampleapp11bd"
   DEPLOYMENTNAME: "agicsampledeploy" 
   APPINSIGHTSLOCATION: "eastus"
