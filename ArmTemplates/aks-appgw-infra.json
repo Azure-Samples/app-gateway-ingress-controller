@@ -121,9 +121,23 @@
             "metadata": {
                 "description": "The sku of the Application Gateway. Default: WAF_v2 (Detection mode). In order to further customize WAF, use azure portal or cli."
             }
+        },
+        "appInsightsLocation": {
+            "type": "string"
+        },
+        "omsLocation": {
+            "type": "string"
+        },
+        "omsWorkspaceName": {
+            "type": "string"
+        },
+        "httpApplicationRoutingEnabled": {
+            "type": "bool"
         }
+        
     },
     "variables": {
+        "omsWorkspaceId": "[concat('Microsoft.OperationalInsights/workspaces/', parameters('omsWorkspaceName'))]",
         "resgpguid": "[substring(replace(guid(resourceGroup().id), '-', ''), 0, 4)]",
         "vnetName": "[concat('virtualnetwork' , variables('resgpguid'))]",
         "applicationGatewayName": "[concat('applicationgateway' , variables('resgpguid'))]",
@@ -148,6 +162,19 @@
         }
     },
     "resources": [
+        {
+            "type": "Microsoft.Insights/components",
+            "name": "[parameters('clusterName')]",
+            "apiVersion": "2014-04-01",
+            "location": "[parameters('appInsightsLocation')]",
+            "tags": {
+                "[concat('hidden-link:', resourceGroup().id, '/providers/Microsoft.ContainerService/managedClusters/', parameters('clusterName'))]": "Resource"
+            },
+            "properties": {
+                "applicationId": "[parameters('clusterName')]",
+                "Request_Source": "AzureTfsExtensionAzureProject"
+            }
+        },
         {
             "type": "Microsoft.ManagedIdentity/userAssignedIdentities",
             "name": "[variables('identityName')]",
@@ -417,6 +444,36 @@
                 "[concat('Microsoft.Resources/deployments/', 'RoleAssignmentDeploymentForKubenetesSp')]"
             ]
         }
+        ,
+        {
+            "apiVersion": "2017-03-15-preview",
+            "type": "Microsoft.OperationalInsights/workspaces",
+            "name": "[parameters('omsWorkspaceName')]",
+            "location": "[parameters('omsLocation')]",
+            "properties": {
+                "sku": {
+                    "name": "standalone"
+                }
+            }
+        },
+        {
+            "apiVersion": "2015-11-01-preview",
+            "type": "Microsoft.OperationsManagement/solutions",
+            "location": "[parameters('omsLocation')]",
+            "dependsOn": [
+                "[variables('omsWorkspaceId')]"
+            ],
+            "name": "[concat('ContainerInsights', '(', parameters('omsWorkspaceName'), ')')]",
+            "properties": {
+                "workspaceResourceId": "[resourceId('Microsoft.OperationalInsights/workspaces/', parameters('omsWorkspaceName'))]"
+            },
+            "plan": {
+                "name": "[concat('ContainerInsights', '(', parameters('omsWorkspaceName'), ')')]",
+                "product": "OMSGallery/ContainerInsights",
+                "promotionCode": "",
+                "publisher": "Microsoft"
+            }
+        }
     ],
     "outputs": {
         "subscriptionId": {
@@ -446,6 +503,14 @@
         "clusterName": {
             "type": "string",
             "value": "[parameters('clusterName')]"
+        },
+        "applicationRoutingZone": {
+            "value": "[if(parameters('httpApplicationRoutingEnabled'), reference(variables('clusterId')).addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName, '')]",
+            "type": "string"
+        },
+        "aiKey": {
+            "value": "[reference(concat('Microsoft.Insights/components/', parameters('clusterName'))).InstrumentationKey]",
+            "type": "string"
         }
     }
 }
