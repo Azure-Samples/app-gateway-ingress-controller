@@ -20,11 +20,11 @@ env:
   KUBERNETESVERSION: 1.19.6
   NAMESPACE: "agicsampleapp11bd"
   DEPLOYMENTNAME: "agicsampledeploy" 
-  # APPINSIGHTSLOCATION: "eastus"
-  # CLUSTERLOCATION: "eastus"
-  # OMSLOCATION: "eastus"
-  # OMSWORKSPACENAME: "agicsampleappc426"
-  # HTTPSAPPLICATIONROUTINGENABLED: false
+  APPINSIGHTSLOCATION: "eastus"
+  CLUSTERLOCATION: "eastus"
+  OMSLOCATION: "eastus"
+  OMSWORKSPACENAME: "agicsampleappc426"
+  HTTPSAPPLICATIONROUTINGENABLED: false
 
 
 jobs:
