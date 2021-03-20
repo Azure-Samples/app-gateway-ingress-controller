@@ -104,7 +104,6 @@ jobs:
           echo "::set-output name=user_assigned_identity::`az aks show -g ${{ env.RESOURCEGROUPNAME }}  -n ${{ env.CLUSTERNAME }} --query identityProfile.kubeletidentity.clientId`"
           echo "::add-mask::`az aks show -g ${{ env.RESOURCEGROUPNAME }}  -n ${{ env.CLUSTERNAME }} --query identityProfile.kubeletidentity.clientId`"
 
-
     - name: Get ACR credentials
       id: getACRCred
       run: |
