@@ -31,7 +31,7 @@ env:
   OMSLOCATION: "eastus"
   OMSWORKSPACENAME: "agicsampleappc426"
   HTTPSAPPLICATIONROUTINGENABLED: false
-  AKSMCRGNAME: "MC_${ env.RESOURCEGROUPNAME }_${ env.CLUSTERNAME }_${ env.LOCATION }"
+  AKSMCRGNAME: "MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${ env.LOCATION }}"
 
 
 jobs:
@@ -113,8 +113,12 @@ jobs:
     - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
       run: |
         echo ".....Deploying the RBAC Enabled Managed Idenity Controller"
-        echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml -n ${{ env.NAMESPACE }}` 
+        echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
 
+    # - name: Set MC AKS Resource Group env Variable
+    #   run: |
+    #     echo  "AKSMCRGNAME=$("MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_$ {{ env.LOCATION }}" >> $GITHUB_ENV
+        
     - name: Get Identity Client and Resource Ids
       id: getIdentityIds
       run: |
@@ -129,31 +133,24 @@ jobs:
           echo "::set-output name=aks_api::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
           echo "::add-mask::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
  
-    - name: Install application gateway ingress controller 
-      id: installAppAGIC
+    - name: Add the AGIC Helm repository 
+      id: addAGIC
       run: |
-          echo ".....Adding the AGIC Helm repository"
           helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
           helm repo update
-          echo "....Installing application gateway ingress controller"
-          helm upgrade -i ingress-agic application-gateway-kubernetes-ingress/ingress-azure \
-          --version 1.2.0-rc1 \
-          --namespace default \
-          --debug \
-          --set appgw.name=${{ env.RESOURCEGROUPNAME }} \
-          --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} \
-          --set appgw.subscriptionId=${{ env.RESOURCEGROUPNAME }} \
-          --set appgw.shared=false \
-          --set appgw.usePrivateIP=false \
-          --set armAuth.type=aadPodIdentity \
-          --set armAuth.identityResourceID=spec.parameters.identityResourceId: ${{ steps.getIdentityIds.outputs.identity_client_id }} \
-          --set armAuth.identityClientID=spec.parameters.identityClientId: ${{ steps.getIdentityIds.outputs.identity_resource_id }} \
-          --set rbac.enabled=true \
-          --set verbosityLevel=3 \
-          --set kubernetes.watchNamespace=default \
-          --set aksClusterConfiguration.apiServerAddress=spec.parameters.aksAPI: ${{ steps.fetchAksApi.outputs.aks_api }}
 
-      
+    - name: Install application gateway ingress controller 
+      id: installAppAGIC
+      run: >
+          helm upgrade ingress-agic --install application-gateway-kubernetes-ingress/ingress-azure 
+          --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }} 
+          --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
+          --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
+          --set armAuth.identityResourceID=spec.parameters.identityResourceId: ${{ steps.getIdentityIds.outputs.identity_client_id }}
+          --set armAuth.identityClientID=spec.parameters.identityClientId: ${{ steps.getIdentityIds.outputs.identity_resource_id }}
+          --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=default
+          --set aksClusterConfiguration.apiServerAddress=spec.parameters.aksAPI: ${{ steps.fetchAksApi.outputs.aks_api }}
+    
     - name: Get ACR credentials
       id: getACRCred
       run: |
