@@ -65,7 +65,7 @@ jobs:
           aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}"
           aksDnsPrefix="${{ env.CLUSTERNAME }}" appInsightsLocation="${{ env.APPINSIGHTSLOCATION }}" httpApplicationRoutingEnabled="${{ env.HTTPSAPPLICATIONROUTINGENABLED }}" omsLocation="${{ env.OMSLOCATION }}"
           omsWorkspaceName="${{ env.OMSWORKSPACENAME }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" kubernetesSubnetName="${{ env.kUBERNETESSUBNETNAME }}"
-          applicationGatewaySubnetName="${{ env.APPGATEWAYSUBNETNAME }}" vnetName= "${{ env.VNETNAME }}" applicationGatewayName="${{ env.APPGWYNAME }}" identityName="${{ env.IDNTYNAME }}"
+          applicationGatewaySubnetName="${{ env.APPGATEWAYSUBNETNAME }}" vnetName="${{ env.VNETNAME }}" applicationGatewayName="${{ env.APPGWYNAME }}" identityName="${{ env.IDNTYNAME }}"
           applicationGatewayPublicIpName="${{ env.APPGWYPUBIPNAME }}"
 
     - name: Create ACR
