@@ -1,5 +1,0 @@
-apiVersion: v2
-name: secret-provider-class
-description: Basic Helm Chart containing the SecretProviderClass
-type: application
-version: 1.0.0

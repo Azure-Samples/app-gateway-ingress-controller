@@ -9,22 +9,29 @@ env:
   LOCATION: "eastus"
   SUBSCRIPTIONID: ${{ secrets.SUBSCRIPTIONID }}
   TENANTID: ${{ secrets.TENANTID }}
+  kUBERNETESSUBNETNAME: "kubesubnet"
+  APPGATEWAYSUBNETNAME": "appgwsubnet"
+  VNETNAME: "agic-sampleapp-vnet"
+  APPGWYNAME: "agic-sampleapp-appgwy"
+  IDNTYNAME": "agic-sampleapp-appgwyIdnty"
+  APPGWYPUBIPNAME": "agic-sampleapp-appgwpublicip"
   IMAGENAME: "agicsampleappcc74"
   REGISTRYSKU: "Standard"
   REGISTRYNAME: "agicsampleappacr"
   REGISTRYLOCATION: "southcentralus"
-  CLUSTERNAME: "agic-sampleapp"
+  CLUSTERNAME: "agic-sampleapp-cluster"
   KUBERNETESAPI: "apps/v1"
   AGENTCOUNT: "3"
   AGENTVMSIZE: "Standard_DS2_v2"
   KUBERNETESVERSION: 1.19.6
+  AKSENABLERBAC: true
   NAMESPACE: "agicsampleapp11bd"
-  DEPLOYMENTNAME: "agicsampledeploy" 
   APPINSIGHTSLOCATION: "eastus"
   CLUSTERLOCATION: "eastus"
   OMSLOCATION: "eastus"
   OMSWORKSPACENAME: "agicsampleappc426"
   HTTPSAPPLICATIONROUTINGENABLED: false
+  AKSMCRGNAME: "MC_${ env.RESOURCEGROUPNAME }_${ env.CLUSTERNAME }_${ env.LOCATION }"
 
 
 jobs:
@@ -45,7 +52,7 @@ jobs:
       run: | 
           az group create --resource-group ${{ env.RESOURCEGROUPNAME }} --location ${{ env.LOCATION }} 
 
-    - name: Create AKS Cluster and App Gateway
+    - name: Create AKS Cluster and App Gateway Infrastructures
       uses: azure/arm-deploy@v1
       id: deploy
       with:
@@ -53,7 +60,13 @@ jobs:
         subscriptionId: ${{ env.SUBSCRIPTIONID }}
         resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
         template: ./ArmTemplates/aks-appgw-infra.json
-        parameters: clusterName="${{ env.CLUSTERNAME }}" aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" aksDnsPrefix="${{ env.CLUSTERNAME }}" appInsightsLocation="${{ env.APPINSIGHTSLOCATION }}" httpApplicationRoutingEnabled="${{ env.HTTPSAPPLICATIONROUTINGENABLED }}" omsLocation="${{ env.OMSLOCATION }}" omsWorkspaceName="${{ env.OMSWORKSPACENAME }}"
+        parameters: | 
+          clusterName="${{ env.CLUSTERNAME }}" aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}" \
+          aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}" \
+          aksDnsPrefix="${{ env.CLUSTERNAME }}" appInsightsLocation="${{ env.APPINSIGHTSLOCATION }}" httpApplicationRoutingEnabled="${{ env.HTTPSAPPLICATIONROUTINGENABLED }}" omsLocation="${{ env.OMSLOCATION }}" \
+          omsWorkspaceName="${{ env.OMSWORKSPACENAME }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" kubernetesSubnetName="${{ env.kUBERNETESSUBNETNAME }}" \
+          applicationGatewaySubnetName="${{ env.APPGATEWAYSUBNETNAME }}" vnetName= "${{ env.VNETNAME }}" applicationGatewayName="${{ env.APPGWYNAME }}" identityName="${{ env.IDNTYNAME }}" \
+          applicationGatewayPublicIpName="${{ env.APPGWYPUBIPNAME }}"
 
     - name: Create ACR
       id: createACR
@@ -97,12 +110,50 @@ jobs:
             echo `kubectl create namespace ${{ env.NAMESPACE }}`
         fi
 
-    - name: Get User Assigned Managed Identity
-      id: getUserAssignedIdentity
+    - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
       run: |
-          echo "::set-output name=user_assigned_identity::`az aks show -g ${{ env.RESOURCEGROUPNAME }}  -n ${{ env.CLUSTERNAME }} --query identityProfile.kubeletidentity.clientId`"
-          echo "::add-mask::`az aks show -g ${{ env.RESOURCEGROUPNAME }}  -n ${{ env.CLUSTERNAME }} --query identityProfile.kubeletidentity.clientId`"
+        echo ".....Deploying the RBAC Enabled Managed Idenity Controller"
+        echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml -n ${{ env.NAMESPACE }}` 
 
+    - name: Get Identity Client and Resource Ids
+      id: getIdentityIds
+      run: |
+          echo "::set-output name=identity_client_id::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }}--query 'clientId' -o tsv`"
+          echo "::add-mask::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }} --query 'clientId' -o tsv`"
+          echo "::set-output name=identity_resource_id::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }} --query 'id' -o tsv)`"
+          echo "::add-mask::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }} --query 'id' -o tsv)`"
+
+    - name: Fetch AKS API 
+      id: fetchAksApi
+      run: |
+          echo "::set-output name=aks_api::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
+          echo "::add-mask::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
+ 
+    - name: Install application gateway ingress controller 
+      id: installAppAGIC
+      run: |
+          echo ".....Adding the AGIC Helm repository"
+          helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+          helm repo update
+          echo "....Installing application gateway ingress controller"
+          helm upgrade -i ingress-agic application-gateway-kubernetes-ingress/ingress-azure \
+          --version 1.2.0-rc1 \
+          --namespace default \
+          --debug \
+          --set appgw.name=${{ env.RESOURCEGROUPNAME }} \
+          --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} \
+          --set appgw.subscriptionId=${{ env.RESOURCEGROUPNAME }} \
+          --set appgw.shared=false \
+          --set appgw.usePrivateIP=false \
+          --set armAuth.type=aadPodIdentity \
+          --set armAuth.identityResourceID=spec.parameters.identityResourceId: ${{ steps.getIdentityIds.outputs.identity_client_id }} \
+          --set armAuth.identityClientID=spec.parameters.identityClientId: ${{ steps.getIdentityIds.outputs.identity_resource_id }} \
+          --set rbac.enabled=true \
+          --set verbosityLevel=3 \
+          --set kubernetes.watchNamespace=default \
+          --set aksClusterConfiguration.apiServerAddress=spec.parameters.aksAPI: ${{ steps.fetchAksApi.outputs.aks_api }}
+
+      
     - name: Get ACR credentials
       id: getACRCred
       run: |
