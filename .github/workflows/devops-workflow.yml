@@ -31,8 +31,7 @@ env:
   OMSLOCATION: "eastus"
   OMSWORKSPACENAME: "agicsampleappc426"
   HTTPSAPPLICATIONROUTINGENABLED: false
-  AKSMCRGNAME: "MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${ env.LOCATION }}"
-
+  
 
 jobs:
   build:
@@ -115,9 +114,9 @@ jobs:
         echo ".....Deploying the RBAC Enabled Managed Idenity Controller"
         echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
 
-    # - name: Set MC AKS Resource Group env Variable
-    #   run: |
-    #     echo  "AKSMCRGNAME=$("MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_$ {{ env.LOCATION }}" >> $GITHUB_ENV
+    - name: Set MC AKS Resource Group env Variable
+      run: |
+        echo  "AKSMCRGNAME=$("MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_$ {{ env.LOCATION }}") >> $GITHUB_ENV
         
     - name: Get Identity Client and Resource Ids
       id: getIdentityIds
