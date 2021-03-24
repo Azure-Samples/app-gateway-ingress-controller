@@ -118,9 +118,7 @@ jobs:
       id: getIdentityIds
       run: |
           echo "::set-output name=identity_client_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'clientId' -o tsv`"
-          echo "::add-mask::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'clientId' -o tsv`"
-          echo "::set-output name=identity_resource_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'id' -o tsv)`"
-          echo "::add-mask::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'id' -o tsv)`"
+          echo "::set-output name=identity_resource_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'id' -o tsv`"
 
     - name: Fetch AKS API 
       id: fetchAksApi
