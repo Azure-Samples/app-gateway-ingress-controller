@@ -139,10 +139,10 @@ jobs:
           --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
-          --set armAuth.identityResourceID:${{ steps.getIdentityIds.outputs.identity_client_id }}
-          --set armAuth.identityClientID:${{ steps.getIdentityIds.outputs.identity_resource_id }}
+          --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_client_id }}
+          --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
           --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=default
-          --set aksClusterConfiguration.apiServerAddress:${{ steps.fetchAksApi.outputs.aks_api }}
+          --set aksClusterConfiguration.apiServerAddress=${{ steps.fetchAksApi.outputs.aks_api }}
     
     - name: Get ACR credentials
       id: getACRCred
