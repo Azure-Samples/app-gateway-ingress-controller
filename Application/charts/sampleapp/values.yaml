@@ -23,7 +23,7 @@ ingress:
   annotations:
     kubernetes.io/ingress.class: azure/application-gateway
   path: /
-  hostname: VALUE_TO_BE_OVERRIDDEN
+  # hostname: VALUE_TO_BE_OVERRIDDEN
 
 secrets: {}
   # Optionally specify a set of secret objects whose values

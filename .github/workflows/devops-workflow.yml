@@ -109,11 +109,11 @@ jobs:
             echo `kubectl create namespace ${{ env.NAMESPACE }}`
         fi
 
+# Use helm render engine later
     - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
       run: |
-        echo ".....Deploying the RBAC Enabled Managed Idenity Controller"
         echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
-    
+
     - name: Get Identity Client and Resource Ids
       id: getIdentityIds
       run: |
@@ -125,18 +125,20 @@ jobs:
       run: |
           echo "::set-output name=aks_api::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
           echo "::add-mask::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
- 
+
+#there may not be a need for this anymore when helm render engine is used
     - name: Add the AGIC Helm repository 
       id: addAGIC
       run: |
           helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
           helm repo update
 
-    - name: Install application gateway ingress controller 
+# Use helm render engine and use override for --set flag later
+    - name: Install Application Gateway Ingress Controller 
       id: installAppAGIC
       run: >
           helm install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
-          --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
+          --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
           --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_client_id }}
