@@ -113,18 +113,15 @@ jobs:
       run: |
         echo ".....Deploying the RBAC Enabled Managed Idenity Controller"
         echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
-
-    - name: Set MC AKS Resource Group env Variable
-      run: |
-        echo "AKSMCRGNAME=$(MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }})" >> $GITHUB_ENV
-        
+    
     - name: Get Identity Client and Resource Ids
       id: getIdentityIds
       run: |
-          echo "::set-output name=identity_client_id::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }}--query 'clientId' -o tsv`"
-          echo "::add-mask::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }} --query 'clientId' -o tsv`"
+          echo `AKSMCRGNAME=MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }}`
+          echo "::set-output name=identity_client_id::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n $AKSMCRGNAME --query 'clientId' -o tsv`"
+          echo "::add-mask::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n $AKSMCRGNAME --query 'clientId' -o tsv`"
           echo "::set-output name=identity_resource_id::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }} --query 'id' -o tsv)`"
-          echo "::add-mask::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.AKSMCRGNAME }} --query 'id' -o tsv)`"
+          echo "::add-mask::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n $AKSMCRGNAME --query 'id' -o tsv)`"
 
     - name: Fetch AKS API 
       id: fetchAksApi
@@ -141,7 +138,7 @@ jobs:
     - name: Install application gateway ingress controller 
       id: installAppAGIC
       run: >
-          helm upgrade ingress-agic application-gateway-kubernetes-ingress/ingress-azure --install
+          helm upgrade --install ingress-agic application-gateway-kubernetes-ingress/ingress-azure
           --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
