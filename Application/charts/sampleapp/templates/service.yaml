@@ -8,11 +8,11 @@ metadata:
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 spec:
-  {{- if .Values.ingress.enabled }}
-  type: ClusterIP
-  {{- else }}
-  type: LoadBalancer
-  {{- end }}
+  # {{- if .Values.ingress.enabled }}
+  # type: ClusterIP
+  # {{- else }}
+  # type: LoadBalancer
+  # {{- end }}
   ports:
     - port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}

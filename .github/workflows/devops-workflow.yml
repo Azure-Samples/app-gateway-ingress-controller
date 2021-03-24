@@ -23,11 +23,11 @@ env:
   KUBERNETESAPI: "apps/v1"
   AGENTCOUNT: "3"
   AGENTVMSIZE: "Standard_DS2_v2"
-  KUBERNETESVERSION: 1.19.6
+  KUBERNETESVERSION: 1.18.14
+  # Note: Downgraded from 1.19.6 because the ingress version and rules attributes are different 
   AKSENABLERBAC: true
   NAMESPACE: "agicsampleapp11bd"
   APPINSIGHTSLOCATION: "eastus"
-  CLUSTERLOCATION: "eastus"
   OMSLOCATION: "eastus"
   OMSWORKSPACENAME: "agicsampleappc426"
   HTTPSAPPLICATIONROUTINGENABLED: false
@@ -101,15 +101,6 @@ jobs:
           az aks get-credentials --resource-group ${{ env.RESOURCEGROUPNAME }} --name ${{ env.CLUSTERNAME }} --file $GITHUB_WORKSPACE/kubeconfig
           echo "KUBECONFIG=$GITHUB_WORKSPACE/kubeconfig" >> $GITHUB_ENV
 
-    - name: Create namespace
-      run: |
-        namespacePresent=`kubectl get namespace | grep ${{ env.NAMESPACE }} | wc -l`
-        if [ $namespacePresent -eq 0 ]
-        then
-            echo `kubectl create namespace ${{ env.NAMESPACE }}`
-        fi
-
-# Use helm render engine later
     - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
       run: |
         echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
@@ -120,23 +111,20 @@ jobs:
           echo "::set-output name=identity_client_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'clientId' -o tsv`"
           echo "::set-output name=identity_resource_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'id' -o tsv`"
 
-    - name: Fetch AKS API 
-      id: fetchAksApi
+    - name: Get AKS API 
+      id: GetAksApi
       run: |
           echo "::set-output name=aks_api::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
           echo "::add-mask::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
 
-#there may not be a need for this anymore when helm render engine is used
     - name: Add the AGIC Helm repository 
-      id: addAGIC
+      id: AddAGICRepo
       run: |
           helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
           helm repo update
 
-# Use helm render engine and use override for --set flag later
-# Make upgrade work or use generate names
     - name: Install Application Gateway Ingress Controller 
-      id: installAppAGIC
+      id: InstallAppAGIC
       run: >
           helm upgrade --install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
           --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
@@ -145,8 +133,16 @@ jobs:
           --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_client_id }}
           --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
           --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=default
-          --set aksClusterConfiguration.apiServerAddress=${{ steps.fetchAksApi.outputs.aks_api }}
-    
+          --set aksClusterConfiguration.apiServerAddress=${{ steps.GetAksApi.outputs.aks_api }}
+
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep ${{ env.NAMESPACE }} | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace ${{ env.NAMESPACE }}`
+        fi
+           
     - name: Get ACR credentials
       id: getACRCred
       run: |
@@ -162,7 +158,7 @@ jobs:
         container-registry-password: ${{ steps.getACRCred.outputs.acr_password }}
         secret-name: ${{ env.CLUSTERNAME }}dockerauth
 
-    - name: Fetch Application insights key
+    - name: Get Application insights key
       id: GetAppInsightsKey
       run: |
         echo "::set-output name=AIKey::`az resource show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.CLUSTERNAME }} --resource-type "Microsoft.Insights/components" --query "properties.InstrumentationKey" -o tsv`"
