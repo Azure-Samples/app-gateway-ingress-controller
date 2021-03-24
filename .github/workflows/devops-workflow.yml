@@ -35,7 +35,7 @@ env:
 
 jobs:
   build:
-    name: Build and push image to container registry
+    name: Provision Infrastructures, Build and Push Image to ACR
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -84,7 +84,7 @@ jobs:
         docker push ${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}:${{ github.sha }}
  
   deploy:
-    name: Deploy application to AKS
+    name: Install Addons and Deploy application to AKS
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -138,7 +138,7 @@ jobs:
     - name: Install Application Gateway Ingress Controller 
       id: installAppAGIC
       run: >
-          helm install appgwyingressh application-gateway-kubernetes-ingress/ingress-azure
+          helm upgrade --install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
           --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
