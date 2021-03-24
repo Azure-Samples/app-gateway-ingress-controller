@@ -134,10 +134,11 @@ jobs:
           helm repo update
 
 # Use helm render engine and use override for --set flag later
+# Make upgrade work or use generate names
     - name: Install Application Gateway Ingress Controller 
       id: installAppAGIC
       run: >
-          helm install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
+          helm install appgwyingressd application-gateway-kubernetes-ingress/ingress-azure
           --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
