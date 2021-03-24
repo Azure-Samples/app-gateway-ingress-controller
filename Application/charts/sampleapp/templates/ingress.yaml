@@ -30,7 +30,7 @@ spec:
     - http:
         paths:
           - path: /
-            pathType: agic
+            pathType: Prefix
             backend:
               service:
                 name: {{ $serviceName }}
