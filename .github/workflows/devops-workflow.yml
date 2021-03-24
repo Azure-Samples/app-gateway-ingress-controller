@@ -117,10 +117,10 @@ jobs:
     - name: Get Identity Client and Resource Ids
       id: getIdentityIds
       run: |
-          echo "::set-output name=identity_client_id::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'clientId' -o tsv`"
-          echo "::add-mask::`az identity show -g ${{ env.RESOURCEGROUPNAME }} -n MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'clientId' -o tsv`"
-          echo "::set-output name=identity_resource_id::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'id' -o tsv)`"
-          echo "::add-mask::`identityResourceId=$(az identity show -g ${{ env.RESOURCEGROUPNAME }} -n MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'id' -o tsv)`"
+          echo "::set-output name=identity_client_id::`az identity show -n ${{ env.IDNTYNAME }} -g MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'clientId' -o tsv`"
+          echo "::add-mask::`az identity show -n ${{ env.IDNTYNAME }} -g MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'clientId' -o tsv`"
+          echo "::set-output name=identity_resource_id::`identityResourceId=$(az identity show -n ${{ env.IDNTYNAME }} -g MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'id' -o tsv)`"
+          echo "::add-mask::`identityResourceId=$(az identity show -n ${{ env.IDNTYNAME }} -g MC_${{ env.RESOURCEGROUPNAME }}_${{ env.CLUSTERNAME }}_${{ env.LOCATION }} --query 'id' -o tsv)`"
 
     - name: Fetch AKS API 
       id: fetchAksApi
@@ -137,9 +137,7 @@ jobs:
     - name: Install application gateway ingress controller 
       id: installAppAGIC
       run: >
-          helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
-          helm repo update
-          helm upgrade appgwyingress application-gateway-kubernetes-ingress/ingress-azure --install
+          helm upgrade appgwyingress application-gateway-kubernetes-ingress/ingress-azure
           --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
