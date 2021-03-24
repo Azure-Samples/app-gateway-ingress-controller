@@ -141,8 +141,8 @@ jobs:
     - name: Install application gateway ingress controller 
       id: installAppAGIC
       run: >
-          helm upgrade ingress-agic --install application-gateway-kubernetes-ingress/ingress-azure 
-          --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }} 
+          helm upgrade ingress-agic application-gateway-kubernetes-ingress/ingress-azure --install
+          --version 1.2.0-rc1 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
           --set armAuth.identityResourceID=spec.parameters.identityResourceId: ${{ steps.getIdentityIds.outputs.identity_client_id }}
