@@ -12,7 +12,7 @@ metadata:
     heritage: {{ .Release.Service }}
 {{- with .Values.ingress.annotations }}
   annotations:
-    kubernetes.io/ingress.class: azure/application-gateway
+    # kubernetes.io/ingress.class: azure/application-gateway
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
