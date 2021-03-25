@@ -6,20 +6,32 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
+  namespace: agicsampleapp11bd
   labels:
     app: {{ $serviceName }}
     release: {{ .Release.Name }}
     heritage: {{ .Release.Service }}
 {{- with .Values.ingress.annotations }}
   annotations:
-    # kubernetes.io/ingress.class: azure/application-gateway
 {{ toYaml . | indent 4 }}
 {{- end }}
 spec:
+{{- if .Values.ingress.tls }}
+  tls:
+  {{- range .Values.ingress.tls }}
+    - hosts:
+      {{- range .hosts }}
+        - {{ . }}
+      {{- end }}
+      secretName: {{ .secretName }}
+  {{- end }}
+{{- end }}
   rules:
+    # - host: {{ .Values.ingress.hostname | quote }}
   - http:
       paths:
-      - backend:
-          serviceName: {{ $serviceName }}
-          servicePort: {{ $servicePort }} 
+        - path: /
+          backend:
+            serviceName: {{ $serviceName }}
+            servicePort: {{ $servicePort }} 
 {{- end }}
