@@ -24,7 +24,6 @@ env:
   AGENTCOUNT: "3"
   AGENTVMSIZE: "Standard_DS2_v2"
   KUBERNETESVERSION: 1.19.6 
-  # Note: Downgraded from 1.19.6 because the ingress version and rules attributes are different  1.18.14
   AKSENABLERBAC: true
   NAMESPACE: "agicsampleapp11bd"
   APPINSIGHTSLOCATION: "eastus"
@@ -83,8 +82,8 @@ jobs:
         docker build "$GITHUB_WORKSPACE/Application" -f  "Application/dockerfile" -t ${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}:${{ github.sha }}
         docker push ${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}:${{ github.sha }}
  
-  deploy:
-    name: Install Addons and Deploy application to AKS
+  addons:
+    name: Install Addons to AKS
     needs: build
     runs-on: ubuntu-latest
     steps:
@@ -135,12 +134,36 @@ jobs:
           --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=default
           --set aksClusterConfiguration.apiServerAddress=${{ steps.GetAksApi.outputs.aks_api }}
 
+    - name : Cleanup
+      run: | 
+        az logout
+        rm -rf $GITHUB_WORKSPACE/kubeconfig
+
+  deploy:
+    name: Deploy sample application to AKS
+    needs: addons
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # login to azure
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Get AKS Credentials
+      id: getContext
+      run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCEGROUPNAME }} --name ${{ env.CLUSTERNAME }} --file $GITHUB_WORKSPACE/kubeconfig
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/kubeconfig" >> $GITHUB_ENV
+
     - name: Create namespace
       run: |
         namespacePresent=`kubectl get namespace | grep ${{ env.NAMESPACE }} | wc -l`
         if [ $namespacePresent -eq 0 ]
         then
             echo `kubectl create namespace ${{ env.NAMESPACE }}`
+            sleep 2m
         fi
            
     - name: Get ACR credentials
