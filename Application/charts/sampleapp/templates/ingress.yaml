@@ -6,7 +6,6 @@ apiVersion: extensions/v1beta1
 kind: Ingress
 metadata:
   name: {{ $fullName }}
-  namespace: agicsampleapp11bd
   labels:
     app: {{ $serviceName }}
     release: {{ .Release.Name }}
