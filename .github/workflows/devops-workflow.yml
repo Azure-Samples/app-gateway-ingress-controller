@@ -23,8 +23,8 @@ env:
   KUBERNETESAPI: "apps/v1"
   AGENTCOUNT: "3"
   AGENTVMSIZE: "Standard_DS2_v2"
-  KUBERNETESVERSION: 1.18.14
-  # Note: Downgraded from 1.19.6 because the ingress version and rules attributes are different 
+  KUBERNETESVERSION: 1.19.6 
+  # Note: Downgraded from 1.19.6 because the ingress version and rules attributes are different  1.18.14
   AKSENABLERBAC: true
   NAMESPACE: "agicsampleapp11bd"
   APPINSIGHTSLOCATION: "eastus"
@@ -130,8 +130,8 @@ jobs:
           --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
           --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
-          --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_client_id }}
-          --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
+          --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
+          --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_client_id }}
           --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=default
           --set aksClusterConfiguration.apiServerAddress=${{ steps.GetAksApi.outputs.aks_api }}
 
