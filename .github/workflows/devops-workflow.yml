@@ -7,8 +7,7 @@ on:
 env:
   RESOURCEGROUPNAME: "agic-sampleapp-rg"
   LOCATION: "eastus"
-  SUBSCRIPTIONID: ${{ secrets.AZURE_CREDENTIALS.subscriptionId }}
-  TENANTID: ${{ secrets.TENANTID }}
+  SUBSCRIPTIONID: ${{ secrets.SUBSCRIPTIONID }}
   kUBERNETESSUBNETNAME: "kubesubnet"
   APPGATEWAYSUBNETNAME: "appgwsubnet"
   VNETNAME: "agic-sampleapp-vnet"
