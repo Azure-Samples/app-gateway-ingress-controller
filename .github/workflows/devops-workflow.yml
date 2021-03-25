@@ -8,7 +8,6 @@ env:
   RESOURCEGROUPNAME: "agic-sampleapp-rg"
   LOCATION: "eastus"
   SUBSCRIPTIONID: ${{ secrets.SUBSCRIPTIONID }}
-  TENANTID: ${{ secrets.TENANTID }}
   kUBERNETESSUBNETNAME: "kubesubnet"
   APPGATEWAYSUBNETNAME: "appgwsubnet"
   VNETNAME: "agic-sampleapp-vnet"
@@ -34,7 +33,7 @@ env:
 
 jobs:
   build:
-    name: Provision Infrastructures, Build and Push Image to ACR
+    name: Provision Infra, Build and Push Image to ACR
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -133,7 +132,7 @@ jobs:
         rm -rf $GITHUB_WORKSPACE/kubeconfig
 
   deploy:
-    name: Deploy sample application to AKS
+    name: Deploy sample app to AKS
     needs: addons
     runs-on: ubuntu-latest
     steps:
