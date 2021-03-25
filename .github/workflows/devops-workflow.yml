@@ -110,12 +110,6 @@ jobs:
           echo "::set-output name=identity_client_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'clientId' -o tsv`"
           echo "::set-output name=identity_resource_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'id' -o tsv`"
 
-    - name: Get AKS API 
-      id: GetAksApi
-      run: |
-          echo "::set-output name=aks_api::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
-          echo "::add-mask::`az aks show -n ${{ env.CLUSTERNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query fqdn -o tsv`"
-
     - name: Add the AGIC Helm repository 
       id: AddAGICRepo
       run: |
@@ -131,8 +125,7 @@ jobs:
           --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
           --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
           --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_client_id }}
-          --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=default
-          --set aksClusterConfiguration.apiServerAddress=${{ steps.GetAksApi.outputs.aks_api }}
+          --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=${{ env.NAMESPACE }}
 
     - name : Cleanup
       run: | 
