@@ -155,7 +155,6 @@ jobs:
         if [ $namespacePresent -eq 0 ]
         then
             echo `kubectl create namespace ${{ env.NAMESPACE }}`
-            sleep 2m
         fi
            
     - name: Get ACR credentials
