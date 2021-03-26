@@ -1,0 +1,209 @@
+name: Build and Deploy to AKS
+on:
+  push:
+    branches:
+      - master
+
+env:
+  RESOURCEGROUPNAME: "agic-sampleapp-rg"
+  LOCATION: "eastus"
+  SUBSCRIPTIONID: ${{ secrets.SUBSCRIPTIONID }}
+  kUBERNETESSUBNETNAME: "kubesubnet"
+  APPGATEWAYSUBNETNAME: "appgwsubnet"
+  VNETNAME: "agic-sampleapp-vnet"
+  APPGWYNAME: "agic-sampleapp-appgwy"
+  IDNTYNAME: "agic-sampleapp-appgwyIdnty"
+  APPGWYPUBIPNAME: "agic-sampleapp-appgwpublicip"
+  IMAGENAME: "agicsampleappcc74"
+  REGISTRYSKU: "Standard"
+  REGISTRYNAME: "agicsampleappacr"
+  REGISTRYLOCATION: "southcentralus"
+  CLUSTERNAME: "agic-sampleapp-cluster"
+  KUBERNETESAPI: "apps/v1"
+  AGENTCOUNT: "3"
+  AGENTVMSIZE: "Standard_DS2_v2"
+  KUBERNETESVERSION: 1.19.6 
+  AKSENABLERBAC: true
+  NAMESPACE: "agicsampleapp11bd"
+  APPINSIGHTSLOCATION: "eastus"
+  OMSLOCATION: "eastus"
+  OMSWORKSPACENAME: "agicsampleappc426"
+  HTTPSAPPLICATIONROUTINGENABLED: false
+
+
+jobs:
+  build:
+    name: Provision Infra, Build and Push Image to ACR
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # login to azure
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+    - name: Create Resource Group
+      id: createResourceGroup
+      run: | 
+          az group create --resource-group ${{ env.RESOURCEGROUPNAME }} --location ${{ env.LOCATION }} 
+
+    - name: Create AKS Cluster and App Gateway Infrastructures
+      uses: azure/arm-deploy@v1
+      id: deploy
+      with:
+        scope: resourcegroup
+        subscriptionId: ${{ env.SUBSCRIPTIONID }}
+        resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
+        template: ./ArmTemplates/aks-appgw-infra.json
+        parameters: > 
+          clusterName="${{ env.CLUSTERNAME }}" aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}"
+          aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}"
+          aksDnsPrefix="${{ env.CLUSTERNAME }}" appInsightsLocation="${{ env.APPINSIGHTSLOCATION }}" httpApplicationRoutingEnabled="${{ env.HTTPSAPPLICATIONROUTINGENABLED }}" omsLocation="${{ env.OMSLOCATION }}"
+          omsWorkspaceName="${{ env.OMSWORKSPACENAME }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" kubernetesSubnetName="${{ env.kUBERNETESSUBNETNAME }}"
+          applicationGatewaySubnetName="${{ env.APPGATEWAYSUBNETNAME }}" vnetName="${{ env.VNETNAME }}" applicationGatewayName="${{ env.APPGWYNAME }}" identityName="${{ env.IDNTYNAME }}"
+          applicationGatewayPublicIpName="${{ env.APPGWYPUBIPNAME }}"
+
+    - name: Create ACR
+      id: createACR
+      run: |
+          az acr create -n ${{ env.REGISTRYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --location "${{env.REGISTRYLOCATION}}" --sku ${{env.REGISTRYSKU}} --admin-enabled
+          echo "::set-output name=acr_username::`az acr credential show -n ${{ env.REGISTRYNAME }} --query username`"
+          echo "::set-output name=acr_password::`az acr credential show -n ${{ env.REGISTRYNAME }} --query passwords[0].value`"
+          echo "::add-mask::`az acr credential show -n ${{ env.REGISTRYNAME }} --query passwords[0].value`"
+
+    - name: Build and push image to ACR
+      id: build-image
+      run: |
+        echo "::add-mask::${{ steps.createACR.outputs.acr_password }}"
+        docker login ${{ env.REGISTRYNAME }}.azurecr.io --username ${{ steps.createACR.outputs.acr_username }} --password ${{ steps.createACR.outputs.acr_password }}
+        docker build "$GITHUB_WORKSPACE/Application" -f  "Application/dockerfile" -t ${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}:${{ github.sha }}
+        docker push ${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}:${{ github.sha }}
+ 
+  addons:
+    name: Install Addons to AKS
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # login to azure
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Get AKS Credentials
+      id: getContext
+      run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCEGROUPNAME }} --name ${{ env.CLUSTERNAME }} --file $GITHUB_WORKSPACE/kubeconfig
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/kubeconfig" >> $GITHUB_ENV
+
+    - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
+      run: |
+        echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
+
+    - name: Get Identity Client and Resource Ids
+      id: getIdentityIds
+      run: |
+          echo "::set-output name=identity_client_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'clientId' -o tsv`"
+          echo "::set-output name=identity_resource_id::`az identity show -n ${{ env.IDNTYNAME }} -g ${{ env.RESOURCEGROUPNAME }} --query 'id' -o tsv`"
+
+    - name: Add the AGIC Helm repository 
+      id: AddAGICRepo
+      run: |
+          helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+          helm repo update
+
+    - name: Install Application Gateway Ingress Controller 
+      id: InstallAppAGIC
+      run: >
+          helm upgrade --install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
+          --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
+          --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
+          --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
+          --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
+          --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_client_id }}
+          --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=${{ env.NAMESPACE }}
+
+    - name : Cleanup
+      run: | 
+        az logout
+        rm -rf $GITHUB_WORKSPACE/kubeconfig
+
+  deploy:
+    name: Deploy sample app to AKS
+    needs: addons
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+
+    # login to azure
+    - name: Login to Azure
+      uses: azure/login@v1
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    - name: Get AKS Credentials
+      id: getContext
+      run: |
+          az aks get-credentials --resource-group ${{ env.RESOURCEGROUPNAME }} --name ${{ env.CLUSTERNAME }} --file $GITHUB_WORKSPACE/kubeconfig
+          echo "KUBECONFIG=$GITHUB_WORKSPACE/kubeconfig" >> $GITHUB_ENV
+
+    - name: Create namespace
+      run: |
+        namespacePresent=`kubectl get namespace | grep ${{ env.NAMESPACE }} | wc -l`
+        if [ $namespacePresent -eq 0 ]
+        then
+            echo `kubectl create namespace ${{ env.NAMESPACE }}`
+        fi
+           
+    - name: Get ACR credentials
+      id: getACRCred
+      run: |
+           echo "::set-output name=acr_username::`az acr credential show -n ${{ env.REGISTRYNAME }} --query username | xargs`"
+           echo "::set-output name=acr_password::`az acr credential show -n ${{ env.REGISTRYNAME }} --query passwords[0].value | xargs`"
+           echo "::add-mask::`az acr credential show -n ${{ env.REGISTRYNAME }} --query passwords[0].value | xargs`"
+
+    - uses: azure/k8s-create-secret@v1
+      with:
+        namespace: ${{ env.NAMESPACE }}
+        container-registry-url: ${{ env.REGISTRYNAME }}.azurecr.io
+        container-registry-username: ${{ steps.getACRCred.outputs.acr_username }}
+        container-registry-password: ${{ steps.getACRCred.outputs.acr_password }}
+        secret-name: ${{ env.CLUSTERNAME }}dockerauth
+
+    - name: Get Application insights key
+      id: GetAppInsightsKey
+      run: |
+        echo "::set-output name=AIKey::`az resource show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.CLUSTERNAME }} --resource-type "Microsoft.Insights/components" --query "properties.InstrumentationKey" -o tsv`"
+        echo "::add-mask::`az resource show -g ${{ env.RESOURCEGROUPNAME }} -n ${{ env.CLUSTERNAME }} --resource-type "Microsoft.Insights/components" --query "properties.InstrumentationKey" -o tsv`"
+
+    - uses: azure/k8s-bake@v1
+      id: bakeManifests
+      with:
+        renderEngine: 'helm'
+        helmChart: './Application/charts/sampleapp' 
+        overrideFiles: './Application/charts/sampleapp/values.yaml'
+        overrides: |
+            image.repository:${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}
+            image.tag:${{ github.sha }}
+            imagePullSecrets:{${{ env.CLUSTERNAME }}dockerauth}
+            applicationInsights.InstrumentationKey:${{ steps.GetAppInsightsKey.outputs.AIKey }}
+            apiVersion:${{ env.KUBERNETESAPI }}
+            extensionApiVersion:${{ env.KUBERNETESAPI }}
+        helm-version: 'latest' 
+        silent: 'true'
+
+    - uses: azure/k8s-deploy@v1
+      with:
+        namespace: ${{ env.NAMESPACE }}
+        manifests: ${{ steps.bakeManifests.outputs.manifestsBundle }}
+        images: |
+          ${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}:${{ github.sha }}
+        imagepullsecrets: |
+          ${{ env.CLUSTERNAME }}dockerauth
+
+    - name : Cleanup
+      run: | 
+        az logout
+        rm -rf $GITHUB_WORKSPACE/kubeconfig
