@@ -26,14 +26,76 @@ Application Gateway Ingress Controller setup helps eliminate the need to have an
 
 AGIC currently uses the Standard_v2 and WAF_v2 SKUs, and provide benefits such as; URL routing, Cookie-based affinity, Secure Sockets Layer (SSL) termination, End-to-end SSL, Support for public, private, and hybrid web sites, and Integrated web application firewall. AGIC is configured via the Kubernetes Ingress resource, along with Service and Deployments/Pods.
 
-In this repo you can find a containerized Python "Hello World"sample app (deployed with [Helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates), all setup with a Github Actions workflow. The [workflow](.github\workflows\devops-workflow.yml) includes steps to:
+In this repo you can find a containerized Python "Hello World" sample app (deployed with [Helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates), all setup with a Github Actions workflow. The [workflow](.github\workflows\devops-workflow.yml) includes steps to:
 
-- Provision vNet, Public ip, Subnet, App Gateway, Managed Identity, App Insights, and an AKS Cluster
-- Install the [AAD Pod Identity & Kubernetes CRDs](https://docs.microsoft.com/en-us/azure/aks/use-azure-ad-pod-identity) using `kubectl`
-- Install [Application Gateway Ingress Controller ](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview) using Helm
+- Provision vNet, Public IP, Subnet, App Gateway, Managed Identity, App Insights, and an AKS Cluster.
+
+```yaml
+  - name: Create AKS Cluster and App Gateway Infrastructures
+      uses: azure/arm-deploy@v1
+      id: deploy
+      with:
+        scope: resourcegroup
+        subscriptionId: ${{ env.SUBSCRIPTIONID }}
+        resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
+        template: ./ArmTemplates/aks-appgw-infra.json
+        parameters: > 
+          clusterName="${{ env.CLUSTERNAME }}" aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}"
+          aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}"
+          aksDnsPrefix="${{ env.CLUSTERNAME }}" appInsightsLocation="${{ env.APPINSIGHTSLOCATION }}" httpApplicationRoutingEnabled="${{ env.HTTPSAPPLICATIONROUTINGENABLED }}" omsLocation="${{ env.OMSLOCATION }}"
+          omsWorkspaceName="${{ env.OMSWORKSPACENAME }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" kubernetesSubnetName="${{ env.kUBERNETESSUBNETNAME }}"
+          applicationGatewaySubnetName="${{ env.APPGATEWAYSUBNETNAME }}" vnetName="${{ env.VNETNAME }}" applicationGatewayName="${{ env.APPGWYNAME }}" identityName="${{ env.IDNTYNAME }}"
+          applicationGatewayPublicIpName="${{ env.APPGWYPUBIPNAME }}"
+```
+
+- Install the [AAD Pod Identity & Kubernetes CRDs](https://docs.microsoft.com/en-us/azure/aks/use-azure-ad-pod-identity) using `kubectl`.
+
+```yaml
+  - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
+  run: |
+    echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
+```
+
+- Install [Application Gateway Ingress Controller ](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview) using Helm.
+
+```yaml
+  - name: Add the AGIC Helm repository 
+      id: AddAGICRepo
+      run: |
+          helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
+          helm repo update
+
+  - name: Install Application Gateway Ingress Controller 
+    id: InstallAppAGIC
+    run: >
+        helm upgrade --install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
+        --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
+        --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
+        --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
+        --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
+        --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_client_id }}
+        --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=${{ env.NAMESPACE }}
+```
+
 - Deploy a containerized sample Python "Hello message" app to the AKS cluster using Helm. The [deployment yaml is configured](Application\charts\sampleapp\templates\deployment.yaml).
 
-
+```yaml
+    - uses: azure/k8s-bake@v1
+      id: bakeManifests
+      with:
+        renderEngine: 'helm'
+        helmChart: './Application/charts/sampleapp' 
+        overrideFiles: './Application/charts/sampleapp/values.yaml'
+        overrides: |
+            image.repository:${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}
+            image.tag:${{ github.sha }}
+            imagePullSecrets:{${{ env.CLUSTERNAME }}dockerauth}
+            applicationInsights.InstrumentationKey:${{ steps.GetAppInsightsKey.outputs.AIKey }}
+            apiVersion:${{ env.KUBERNETESAPI }}
+            extensionApiVersion:${{ env.KUBERNETESAPI }}
+        helm-version: 'latest' 
+        silent: 'true'
+```
 
 Here is the folder structure:
 
