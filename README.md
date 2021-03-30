@@ -89,7 +89,7 @@ Here is the folder structure:
     echo "Service Principle Object ID: $ObjectID"
     ```
 
-    Also add a secret named `SUBSCRIPTIONID` for the subscription id, a secret named `SERVICEPRINCIPALOBJECTID` for the Service Principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, and `SERVICEPRINCIPALAPPID` for the Service Principle app id. 
+    Also add a secret named `SUBSCRIPTIONID` for the subscription id, `SERVICEPRINCIPALOBJECTID` for the Service Principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, and `SERVICEPRINCIPALAPPID` for the Service Principle app id. 
     
 
     ![action-secrets](./assets/action-secrets.png)
