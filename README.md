@@ -52,64 +52,80 @@ Here is the folder structure:
 - [Kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/): Kubernetes command-line tool which allows you to run commands against Kubernetes clusters.
 - [GitHub](https://github.com/) account
 
-### Set up
+### Set Up
 
-1. Fork the repo to your github account and git clone.
-2. Create a service principal with 'User Access Adminstrator' role for aks to manage and access network resources
+1. Fork the repo to your Github Account and git clone.
+2. Create a Service Principal with 'User Access Adminstrator' role for aks to manage and access network resources and assign a 'Contributor' role with Subscription scope.
 
     ```bash
     # Set your variables
     SERVICEPRINCIPALNAME="agic-sampleapp-spn"
+    SUBSCRIPTIONID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-    # Create a service principal with User Access Adminstrator role
+    # Create a Service Principal with User Access Adminstrator role
     az ad sp create-for-rbac --name http://$SERVICEPRINCIPALNAME --role 'User Access Administrator' --output json
+
+    # Assign a Contributor role to the Service Principle with Subscription scope 
+    AppID=$(az ad sp show --id http://$SERVICEPRINCIPALNAME --query appId --output tsv)
+    az role assignment create --assignee $AppID --role Contributor --scope /subscriptions/$SUBSCRIPTIONID
     ```
 
-3. Use the json output of the last command as a secret named `AZURE_CREDENTIALS` in the repository settings (Settings -> Secrets -> Add New Secret).
-
-    Also add a secret named `SUBSCRIPTIONID` for the subscription id, a secret named `SERVICEPRINCIPALOBJECTID` for the service principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the service principle client secret, and `SERVICEPRINCIPALAPPID` for the service principle app id. 
-    
-    The service principle app id and client secret is in the json output as 'appId' and 'password' respectively, but the object id can be obtained as below:
+3. Use the JSON output of the last command as a secret named `AZURE_CREDENTIALS` in the Github repository settings ( Settings -> Secrets -> Add New Secret ).
+    ```json
+      {
+        "clientId": "<GUID>",
+        "clientSecret": "<GUID>",
+        "subscriptionId": "<GUID>",
+        "tenantId": "<GUID>"
+      }
+    ```
+    The Service Principle clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively, but the object id can be obtained as below:
 
     ```bash
-    APP_ID=$(az ad sp show --id http://$SERVICEPRINCIPALNAME --query appId --output tsv)
-    OBJECT_ID=$(az ad sp show --id $APP_ID --query objectId -o tsv)
+    AppID=$(az ad sp show --id http://$SERVICEPRINCIPALNAME --query appId --output tsv)
+    ObjectID=$(az ad sp show --id $AppID --query objectId -o tsv)
 
     # Output the Service principle Object Id
-    echo "Service principle Object ID: $OBJECT_ID"
+    echo "Service Principle Object ID: $ObjectID"
     ```
+
+    Also add a secret named `SUBSCRIPTIONID` for the subscription id, a secret named `SERVICEPRINCIPALOBJECTID` for the Service Principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, and `SERVICEPRINCIPALAPPID` for the Service Principle app id. 
+    
 
     ![action-secrets](./assets/action-secrets.png)
 
     For more details on generating the deployment credentials please see [this guide](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-github-actions#generate-deployment-credentials).
 
 
-4. [Github Actions](https://docs.github.com/en/actions) will be used to automate the workflow and deploy all the necessary resources to Azure. Open the [.github\workflows\devops-workflow.yml](.github\workflows\devops-workflow.yml) and change the environment variables such as the `RESOURCEGROUPNAME`, `kUBERNETESSUBNETNAME`,`APPGATEWAYSUBNETNAME`, `VNETNAME`, `APPGWYNAME` e.t.c accordingly.
+4. [Github Actions](https://docs.github.com/en/actions) will be used to automate the workflow and deploy all the necessary resources to Azure. Open the [.github\workflows\devops-workflow.yml](.github\workflows\devops-workflow.yml) and change the environment variables such as the `RESOURCEGROUPNAME`, `KUBERNETESSUBNETNAME`, `CLUSTERNAME`, `APPGATEWAYSUBNETNAME`, `VNETNAME`, `APPGWYNAME` e.t.c accordingly.
 
 5. Commit your changes. The commit should trigger the jobs within the workflow and provision all the resources.
 
 ## Validate the Results
 
 1. When the deployment is successful, all the Kubernetes components should be in a running state:
-```bash
-# Get pods
-kubectl get pods
-```
-![app gateway ingress controller](./assets/appgwyingress.png)
 
+    ```bash
+    # Connect to the AKS Cluster
+    az aks get-credentials -n $CLUSTERNAME -g $RESOURCEGROUPNAME 
 
-2. Login to [Azure Portal](https://portal.azure.com) to check the application gateway frontend and backend health probes.
+    # Get pods
+    kubectl get pods
+    ```
+    ![app gateway ingress controller](./assets/appgwyingress.png)
 
-![Frontend health probes](./assets/healthprobes.png)
+2. Login to [Azure Portal](https://portal.azure.com) to check the application gateway frontend and backend health probes is healthy.
 
-![Backend health probes](./assets/backendhealthprobes.png)
+    ![Frontend health probes](./assets/healthprobes.png)
+
+    ![Backend health probes](./assets/backendhealthprobes.png)
 
 3. Get the Public IP Address of the Aplication Gateway and curl the IP Address:
 
-```bash
-# #Get the ip address of the app gateway
-az network public-ip show -n $APPGWYPUBIPNAME -g $RESOURCEGROUPNAME --query ipAddress -o tsv
-```
+    ```bash
+    # #Get the ip address of the app gateway
+    az network public-ip show -n $APPGWYPUBIPNAME -g $RESOURCEGROUPNAME --query ipAddress -o tsv
+    ```
 
-![app gateway ingress controller](./assets/result.png)
+    ![app gateway ingress controller](./assets/result.png)
 
