@@ -20,82 +20,18 @@ urlFragment: app-gateway-ingress-controller
 This repo is a walkthrough to simplify the deployment of a greenfield [App Gateway Ingress Controller](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-install-new) by providing scripts with automated Github Actions workflow. 
 
 
-Application Gateway Ingress Controller setup helps eliminate the need to have another load balancer/public IP in front of AKS cluster and avoids multiple requests to reach the AKS cluster. Application Gateway talks to pods directly using their private IP and does not require NodePort or KubeProxy services which improves deployment’s performance.
+Application Gateway Ingress Controller setup helps eliminate the need to have another load balancer/public IP in front of AKS cluster and avoids multiple requests to reach the AKS cluster. Application Gateway talks to pods directly using their private IP and does not require NodePort or KubeProxy services thus improves deployment’s performance.
 
 ![agic with aks flow](./assets/aks-agic.png)
 
 AGIC currently uses the Standard_v2 and WAF_v2 SKUs, and provide benefits such as; URL routing, Cookie-based affinity, Secure Sockets Layer (SSL) termination, End-to-end SSL, Support for public, private, and hybrid web sites, and Integrated web application firewall. AGIC is configured via the Kubernetes Ingress resource, along with Service and Deployments/Pods.
 
-In this repo you can find a containerized Python "Hello World" sample app (deployed with [Helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates), all setup with a Github Actions workflow. The [workflow](.github\workflows\devops-workflow.yml) includes steps to:
+In this repo you can find a containerized Python "Hello World" sample app (deployed with [Helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates). All the setup and scripts in a Github Actions workflow can be found [here](.github\workflows\devops-workflow.yml). The steps includes:
 
 - Provision vNet, Public IP, Subnet, App Gateway, Managed Identity, App Insights, and an AKS Cluster.
-
-```yaml
-  - name: Create AKS Cluster and App Gateway Infrastructures
-      uses: azure/arm-deploy@v1
-      id: deploy
-      with:
-        scope: resourcegroup
-        subscriptionId: ${{ env.SUBSCRIPTIONID }}
-        resourceGroupName: ${{ env.RESOURCEGROUPNAME }}
-        template: ./ArmTemplates/aks-appgw-infra.json
-        parameters: > 
-          clusterName="${{ env.CLUSTERNAME }}" aksServicePrincipalAppId="${{ secrets.AKSSERVICEPRINCIPALAPPID }}" aksServicePrincipalClientSecret="${{ secrets.AKSSERVICEPRINCIPALCLIENTSECRET }}"
-          aksServicePrincipalObjectId="${{ secrets.AKSSERVICEPRINCIPALOBJECTID }}" aksAgentCount="${{ env.AGENTCOUNT }}" aksAgentVMSize="${{ env.AGENTVMSIZE }}" kubernetesVersion="${{ env.KUBERNETESVERSION }}"
-          aksDnsPrefix="${{ env.CLUSTERNAME }}" appInsightsLocation="${{ env.APPINSIGHTSLOCATION }}" httpApplicationRoutingEnabled="${{ env.HTTPSAPPLICATIONROUTINGENABLED }}" omsLocation="${{ env.OMSLOCATION }}"
-          omsWorkspaceName="${{ env.OMSWORKSPACENAME }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" aksEnableRBAC="${{ env.AKSENABLERBAC }}" kubernetesSubnetName="${{ env.kUBERNETESSUBNETNAME }}"
-          applicationGatewaySubnetName="${{ env.APPGATEWAYSUBNETNAME }}" vnetName="${{ env.VNETNAME }}" applicationGatewayName="${{ env.APPGWYNAME }}" identityName="${{ env.IDNTYNAME }}"
-          applicationGatewayPublicIpName="${{ env.APPGWYPUBIPNAME }}"
-```
-
 - Install the [AAD Pod Identity & Kubernetes CRDs](https://docs.microsoft.com/en-us/azure/aks/use-azure-ad-pod-identity) using `kubectl`.
-
-```yaml
-  - name: Install AAD Pod Identity & Kubernetes CRDs (AzureIdentity, AzureAssignedIdentity, AzureIdentityBinding)
-  run: |
-    echo `kubectl create -f https://raw.githubusercontent.com/Azure/aad-pod-identity/master/deploy/infra/deployment-rbac.yaml` 
-```
-
 - Install [Application Gateway Ingress Controller ](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview) using Helm.
-
-```yaml
-  - name: Add the AGIC Helm repository 
-      id: AddAGICRepo
-      run: |
-          helm repo add application-gateway-kubernetes-ingress https://appgwingress.blob.core.windows.net/ingress-azure-helm-package/
-          helm repo update
-
-  - name: Install Application Gateway Ingress Controller 
-    id: InstallAppAGIC
-    run: >
-        helm upgrade --install appgwyingress application-gateway-kubernetes-ingress/ingress-azure
-        --version 1.4.0 --namespace default --debug --set appgw.name=${{ env.APPGWYNAME }}
-        --set appgw.resourceGroup=${{ env.RESOURCEGROUPNAME }} --set appgw.subscriptionId=${{ env.SUBSCRIPTIONID }}
-        --set appgw.shared=false --set appgw.usePrivateIP=false --set armAuth.type=aadPodIdentity
-        --set armAuth.identityResourceID=${{ steps.getIdentityIds.outputs.identity_resource_id }}
-        --set armAuth.identityClientID=${{ steps.getIdentityIds.outputs.identity_client_id }}
-        --set rbac.enabled=true --set verbosityLevel=3 --set kubernetes.watchNamespace=${{ env.NAMESPACE }}
-```
-
-- Deploy a containerized sample Python "Hello message" app to the AKS cluster using Helm. The [deployment yaml is configured](Application\charts\sampleapp\templates\deployment.yaml).
-
-```yaml
-    - uses: azure/k8s-bake@v1
-      id: bakeManifests
-      with:
-        renderEngine: 'helm'
-        helmChart: './Application/charts/sampleapp' 
-        overrideFiles: './Application/charts/sampleapp/values.yaml'
-        overrides: |
-            image.repository:${{ env.REGISTRYNAME }}.azurecr.io/${{ env.IMAGENAME }}
-            image.tag:${{ github.sha }}
-            imagePullSecrets:{${{ env.CLUSTERNAME }}dockerauth}
-            applicationInsights.InstrumentationKey:${{ steps.GetAppInsightsKey.outputs.AIKey }}
-            apiVersion:${{ env.KUBERNETESAPI }}
-            extensionApiVersion:${{ env.KUBERNETESAPI }}
-        helm-version: 'latest' 
-        silent: 'true'
-```
+- Deploy a containerized sample Python "Hello message" app to the AKS cluster using Helm.
 
 Here is the folder structure:
 
@@ -107,7 +43,6 @@ Here is the folder structure:
   - `fastapi-app` - Python sample app
   - `dockerfile` - Dockerfile for the sample app
 - `ArmTemplates` - Arm Templates for provisioning vnet, subnet, public ip, aks, acr and application insights
-
 
 ## Getting Started
 
@@ -123,20 +58,24 @@ Here is the folder structure:
 2. Create a service principal with 'User Access Adminstrator' role for aks to manage and access network resources
 
     ```bash
+    # Set your variables
+    SERVICEPRINCIPALNAME="agic-sampleapp-spn"
+
     # Create a service principal with User Access Adminstrator role
-    az ad sp create-for-rbac --name http://$SERVICEPRINCIPALNAME --role 'User Access Adminstrator' --output json
+    az ad sp create-for-rbac --name http://$SERVICEPRINCIPALNAME --role 'User Access Administrator' --output json
     ```
 
 3. Use the json output of the last command as a secret named `AZURE_CREDENTIALS` in the repository settings (Settings -> Secrets -> Add New Secret).
 
-    Also add a secret named `SUBSCRIPTIONID` for the subscription id and a secret named `OBJECTID` for the service principle object id. 
+    Also add a secret named `SUBSCRIPTIONID` for the subscription id, a secret named `SERVICEPRINCIPALOBJECTID` for the service principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the service principle client secret, and `SERVICEPRINCIPALAPPID` for the service principle app id. 
     
-    The object id can be obtained as below:
+    The service principle app id and client secret is in the json output as 'appId' and 'password' respectively, but the object id can be obtained as below:
+
     ```bash
     APP_ID=$(az ad sp show --id http://$SERVICEPRINCIPALNAME --query appId --output tsv)
     OBJECT_ID=$(az ad sp show --id $APP_ID --query objectId -o tsv)
 
-    # Output to Service principle object ID
+    # Output the Service principle Object Id
     echo "Service principle Object ID: $OBJECT_ID"
     ```
 
@@ -145,13 +84,13 @@ Here is the folder structure:
     For more details on generating the deployment credentials please see [this guide](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-github-actions#generate-deployment-credentials).
 
 
-4. [Github Actions](https://docs.github.com/en/actions) will be used to automate the workflow and deploy all the necessary resources to Azure. Open the [.github\workflows\devops-workflow.yml](.github\workflows\devops-workflow.yml) and change the environment variables accordingly. Update the `RESOURCEGROUPNAME` variable and set the values that you created above.
+4. [Github Actions](https://docs.github.com/en/actions) will be used to automate the workflow and deploy all the necessary resources to Azure. Open the [.github\workflows\devops-workflow.yml](.github\workflows\devops-workflow.yml) and change the environment variables such as the `RESOURCEGROUPNAME`, `kUBERNETESSUBNETNAME`,`APPGATEWAYSUBNETNAME`, `VNETNAME`, `APPGWYNAME` e.t.c accordingly.
 
-5. Commit your changes. The commit will trigger the jobs within the workflow and will provision all the resources.
+5. Commit your changes. The commit should trigger the jobs within the workflow and provision all the resources.
 
 ## Validate the Results
 
-1. When the deployment is successful, all the Kubernetes components will be in a running state:
+1. When the deployment is successful, all the Kubernetes components should be in a running state:
 ```bash
 # Get pods
 kubectl get pods
@@ -159,7 +98,7 @@ kubectl get pods
 ![app gateway ingress controller](./assets/appgwyingress.png)
 
 
-2. Login to [Azure Portal](https://portal.azure.com) to check the application gateway front end and backend health probes.
+2. Login to [Azure Portal](https://portal.azure.com) to check the application gateway frontend and backend health probes.
 
 ![Frontend health probes](./assets/healthprobes.png)
 
