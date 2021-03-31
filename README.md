@@ -85,7 +85,7 @@ Folder structure:
     SERVICEPRINCIPALNAME="agic-sampleapp-spn"
     SUBSCRIPTIONID="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 
-    # Create a Service Principal with User Access Adminstrator role
+    # Create a Service Principal with User Access Administrator role
     az ad sp create-for-rbac --name http://$SERVICEPRINCIPALNAME --role 'User Access Administrator' --output json
 
     # Assign a Contributor role to the Service Principle with Subscription scope 
