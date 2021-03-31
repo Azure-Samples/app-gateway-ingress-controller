@@ -17,10 +17,10 @@ urlFragment: app-gateway-ingress-controller
 
 ## Overview
 
-This repo is a walkthrough to simplify the deployment of a greenfield [App Gateway Ingress Controller](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-install-new) by providing scripts with automated Github Actions workflow. 
+This repo is a walkthrough to simplify the deployment of a greenfield [App Gateway Ingress Controller](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-install-new) using an automated Github Actions workflow. 
 
 
-Application Gateway Ingress Controller setup helps eliminate the need to have another load balancer/public IP in front of AKS cluster and avoids multiple requests to reach the AKS cluster. Application Gateway talks to pods directly using their private IP and does not require NodePort or KubeProxy services thus improves deployment’s performance.
+Application Gateway Ingress Controller setup helps eliminate the need to have another load balancer/public IP in front of AKS cluster and avoids multiple requests to reach the AKS cluster. Application Gateway talks to pods directly using their private IP and does not require NodePort or KubeProxy services thus improves performance.
 
 ![agic with aks flow](./assets/aks-agic.png)
 
@@ -47,7 +47,7 @@ spec:
                 number: 80
 ```
 
-In this repo you can find a containerized Python "hello world" sample app (deployed with [helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates). All the setup in the Github Actions workflow can be found [here](.github\workflows\devops-workflow.yml). The steps includes:
+In this repo you can find a containerized Python "hello world" sample app (deployed with [helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vNet, public IP, Subnets, App Gateway, and Managed Identity (provisioned with ARM templates). All the setup in the Github Actions workflow can be found [here](.github\workflows\devops-workflow.yml). The steps includes:
 
 - Provision vNet, Public IP, Subnet, App Gateway, Managed Identity, App Insights, and an AKS Cluster.
 - Install the [AAD Pod Identity & Kubernetes CRDs](https://docs.microsoft.com/en-us/azure/aks/use-azure-ad-pod-identity) using `kubectl`.
@@ -137,7 +137,7 @@ Folder structure:
     ```
     ![app gateway ingress controller](./assets/appgwyingress.png)
 
-2. Login to [Azure Portal](https://portal.azure.com) to check the application gateway frontend and backend health probes is healthy.
+2. Login to [Azure Portal](https://portal.azure.com) to check the application gateway frontend and backend health probes shows up and healthy respectively.
 
     ![Frontend health probes](./assets/healthprobes.png)
 
@@ -149,6 +149,6 @@ Folder structure:
     # #Get the ip address of the app gateway
     az network public-ip show -n $APPGWYPUBIPNAME -g $RESOURCEGROUPNAME --query ipAddress -o tsv
     ```
-
+    
     ![app gateway ingress controller](./assets/result.png)
 
