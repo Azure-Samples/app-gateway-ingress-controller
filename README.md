@@ -52,7 +52,7 @@ In this repo you can find a containerized Python "hello world" sample app (deplo
 - Provision vNet, Public IP, Subnet, App Gateway, Managed Identity, App Insights, and an AKS Cluster.
 - Install the [AAD Pod Identity & Kubernetes CRDs](https://docs.microsoft.com/en-us/azure/aks/use-azure-ad-pod-identity) using `kubectl`.
 - Install [Application Gateway Ingress Controller ](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview) using `helm`.
-- Deploy a containerized sample Python "Hello message" app to the AKS cluster using `helm`.
+- Deploy a containerized sample Python "hello world" app to the AKS cluster using `helm`.
 
 The AGIC Kubernetes Ingress resource's helm template can be found [here](.\Application\charts\sampleapp\templates\ingress.yaml).
 
