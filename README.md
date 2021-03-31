@@ -24,16 +24,39 @@ Application Gateway Ingress Controller setup helps eliminate the need to have an
 
 ![agic with aks flow](./assets/aks-agic.png)
 
-AGIC currently uses the Standard_v2 and WAF_v2 SKUs, and provide benefits such as; URL routing, Cookie-based affinity, Secure Sockets Layer (SSL) termination, End-to-end SSL, Support for public, private, and hybrid web sites, and Integrated web application firewall. AGIC is configured via the Kubernetes Ingress resource, along with Service and Deployments/Pods.
+AGIC currently uses the Standard_v2 and WAF_v2 SKUs, and provide benefits such as; URL routing, Cookie-based affinity, Secure Sockets Layer (SSL) termination, End-to-end SSL, Support for public, private, and hybrid web sites, and Integrated web application firewall. AGIC is configured via the Kubernetes Ingress resource, along with Service and Deployments/Pods. Here is an example of an AGIC configured Kubernetes Ingress resource:
 
-In this repo you can find a containerized Python "Hello World" sample app (deployed with [Helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates). All the setup and scripts in a Github Actions workflow can be found [here](.github\workflows\devops-workflow.yml). The steps includes:
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: agic-sample-app
+  labels: agic-sample-app
+  annotations:
+    kubernetes.io/ingress.class: azure/application-gateway
+spec:
+  rules:
+  - http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: agic-sample-app
+              port:
+                number: 80
+```
+
+In this repo you can find a containerized Python "hello world" sample app (deployed with [helm](https://helm.sh/)) running in an AKS cluster inside a network infrastructure with vnet, public ip, subnets, app gateway, and managed identity (provisioned with ARM templates). All the setup in the Github Actions workflow can be found [here](.github\workflows\devops-workflow.yml). The steps includes:
 
 - Provision vNet, Public IP, Subnet, App Gateway, Managed Identity, App Insights, and an AKS Cluster.
 - Install the [AAD Pod Identity & Kubernetes CRDs](https://docs.microsoft.com/en-us/azure/aks/use-azure-ad-pod-identity) using `kubectl`.
-- Install [Application Gateway Ingress Controller ](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview) using Helm.
-- Deploy a containerized sample Python "Hello message" app to the AKS cluster using Helm.
+- Install [Application Gateway Ingress Controller ](https://docs.microsoft.com/en-us/azure/application-gateway/ingress-controller-overview) using `helm`.
+- Deploy a containerized sample Python "Hello message" app to the AKS cluster using `helm`.
 
-Here is the folder structure:
+The AGIC Kubernetes Ingress resource's helm template can be found [here](.\Application\charts\sampleapp\templates\ingress.yaml).
+
+Folder structure:
 
 - `.github\workflows`
   - `devops-workflow.yml` - Github Actions Pipelines yaml file
@@ -79,7 +102,12 @@ Here is the folder structure:
         "tenantId": "<GUID>"
       }
     ```
-    The Service Principle clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively, but the object id can be obtained as below:
+
+    Also add a secret named `SUBSCRIPTIONID` for the subscription id, `SERVICEPRINCIPALOBJECTID` for the Service Principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, and `SERVICEPRINCIPALAPPID` for the Service Principle app id. 
+    
+    ![action-secrets](./assets/action-secrets.png)
+
+    **Note:** The Service Principle clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively. The object id can be obtained as below:
 
     ```bash
     AppID=$(az ad sp show --id http://$SERVICEPRINCIPALNAME --query appId --output tsv)
@@ -88,11 +116,6 @@ Here is the folder structure:
     # Output the Service principle Object Id
     echo "Service Principle Object ID: $ObjectID"
     ```
-
-    Also add a secret named `SUBSCRIPTIONID` for the subscription id, `SERVICEPRINCIPALOBJECTID` for the Service Principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, and `SERVICEPRINCIPALAPPID` for the Service Principle app id. 
-    
-
-    ![action-secrets](./assets/action-secrets.png)
 
     For more details on generating the deployment credentials please see [this guide](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-github-actions#generate-deployment-credentials).
 
