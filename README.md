@@ -65,7 +65,7 @@ Folder structure:
     - `sampleapp` - Helm chart for sample app
   - `fastapi-app` - Python sample app
   - `dockerfile` - Dockerfile for the sample app
-- `ArmTemplates` - Arm Templates for provisioning vnet, subnet, public ip, aks, acr and application insights
+- `ArmTemplates` - Arm Templates for provisioning vNet, Subnet, Public IP, AKS, ACR and Application Insights
 
 ## Getting Started
 
@@ -78,7 +78,7 @@ Folder structure:
 ### Set Up
 
 1. Fork the repo to your Github Account and git clone.
-2. Create a Service Principal with 'User Access Adminstrator' role for aks to manage and access network resources and assign a 'Contributor' role with Subscription scope.
+2. Create a Service Principal with 'User Access Administrator' role for AKS to manage and access network resources and assign a 'Contributor' role with Subscription scope.
 
     ```bash
     # Set your variables
@@ -143,7 +143,7 @@ Folder structure:
 
     ![Backend health probes](./assets/backendhealthprobes.png)
 
-3. Get the Public IP Address of the Aplication Gateway and curl the IP Address:
+3. Get the Public IP Address of the Application Gateway and curl the IP Address:
 
     ```bash
     # #Get the ip address of the app gateway
