@@ -8,8 +8,9 @@ products:
 - azure
 - azure-kubernetes-service
 - github
-name: App Gateway Ingress Controller
-description: Using App Gateway Ingress Controller with Azure Kubernetes
+- application-gateway
+name: Application Gateway Ingress Controller
+description: Using Application Gateway Ingress Controller with Azure Kubernetes
 urlFragment: app-gateway-ingress-controller
 ---
 
@@ -93,7 +94,9 @@ Folder structure:
     az role assignment create --assignee $AppID --role Contributor --scope /subscriptions/$SUBSCRIPTIONID
     ```
 
-3. Use the JSON output of the last command as a secret named `AZURE_CREDENTIALS` in the Github repository settings ( Settings -> Secrets -> Add New Secret ).
+3. Use the JSON output of the "Create a Service Principal with User Access Administrator role" as a secret named `AZURE_CREDENTIALS` in the Github repository settings ( Settings -> Secrets -> Add New Secret ).
+
+    **Note:** The Service Principle clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively.
     ```json
       {
         "clientId": "<GUID>",
@@ -102,12 +105,7 @@ Folder structure:
         "tenantId": "<GUID>"
       }
     ```
-
-    Also add a secret named `SUBSCRIPTIONID` for the subscription id, `SERVICEPRINCIPALOBJECTID` for the Service Principle object id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, and `SERVICEPRINCIPALAPPID` for the Service Principle app id. 
-    
-    ![action-secrets](./assets/action-secrets.png)
-
-    **Note:** The Service Principle clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively. The object id can be obtained as below:
+    Also add a secret named `SUBSCRIPTIONID` for the subscription id, `SERVICEPRINCIPALCLIENTSECRET` for the Service Principle client secret, `SERVICEPRINCIPALAPPID` for the Service Principle app id, and `SERVICEPRINCIPALOBJECTID` for the Service Principle object id. The object id can be obtained as below:
 
     ```bash
     AppID=$(az ad sp show --id http://$SERVICEPRINCIPALNAME --query appId --output tsv)
@@ -116,13 +114,17 @@ Folder structure:
     # Output the Service principle Object Id
     echo "Service Principle Object ID: $ObjectID"
     ```
+    
+    ![action-secrets](./assets/action-secrets.png)
+
 
     For more details on generating the deployment credentials please see [this guide](https://docs.microsoft.com/en-us/azure/azure-resource-manager/templates/deploy-github-actions#generate-deployment-credentials).
 
-
 4. [Github Actions](https://docs.github.com/en/actions) will be used to automate the workflow and deploy all the necessary resources to Azure. Open the [.github\workflows\devops-workflow.yml](.github\workflows\devops-workflow.yml) and change the environment variables such as the `RESOURCEGROUPNAME`, `KUBERNETESSUBNETNAME`, `CLUSTERNAME`, `APPGATEWAYSUBNETNAME`, `VNETNAME`, `APPGWYNAME` e.t.c accordingly.
 
-5. Commit your changes. The commit should trigger the jobs within the workflow and provision all the resources.
+5. Enable Github Actions workflow. 
+
+6. Commit your changes. The commit should trigger the jobs within the workflow and provision all the resources.
 
 ## Validate the Results
 
