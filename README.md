@@ -96,7 +96,7 @@ Folder structure:
 
 3. Use the JSON output of the "Create a Service Principal with User Access Administrator role" as a secret named `AZURE_CREDENTIALS` in the Github repository settings ( Settings -> Secrets -> Add New Secret ).
 
-    **Note:** The Service Principle clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively.
+    **Note:** The Service Principle's clientId and clientSecret is in the JSON output as 'appId' and 'password' respectively.
     ```json
       {
         "clientId": "<GUID>",
