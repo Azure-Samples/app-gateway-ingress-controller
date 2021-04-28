@@ -361,3 +361,8 @@ MigrationBackup/
 .ionide/
 .DS_Store
 
+<<<<<<< Updated upstream
+=======
+README.md
+Application/dockerfile
+>>>>>>> Stashed changes
