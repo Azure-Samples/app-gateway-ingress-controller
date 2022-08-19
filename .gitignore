@@ -361,3 +361,16 @@ MigrationBackup/
 .ionide/
 .DS_Store
 
+Application/.dockerignore
+Application/charts/sampleapp/.helmignore
+Application/charts/sampleapp/Chart.yaml
+Application/charts/sampleapp/templates/_helpers.tpl
+Application/charts/sampleapp/templates/deployment.yaml
+Application/charts/sampleapp/templates/ingress.yaml
+Application/charts/sampleapp/templates/NOTES.txt
+Application/charts/sampleapp/templates/secrets.yaml
+Application/charts/sampleapp/templates/service.yaml
+Application/charts/sampleapp/values.yaml
+ArmTemplates/aks-applicationInsights.json
+ArmTemplates/containerRegistry-template.json
+LICENSE.md
